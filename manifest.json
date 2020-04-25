@@ -1,0 +1,14 @@
+{
+    "manifest_version": 2,
+    "name": "CHEatSS",
+    "version": "1.0",
+    "description": "Stockfish Cheat Engine for chess.com",
+    "content_scripts": [
+        {
+            "matches": ["*://www.chess.com/*"],
+            "js": ["content_script.js"],
+            "run_at": "document_start"
+        }
+    ],
+    "web_accessible_resources": ["main.js"]
+}
