@@ -63,14 +63,15 @@ const piotr = {
     '8': 'e8',
     '9': 'f8',
     '!': 'g8',
-    '?': 'h8'
+    '?': 'h8',
 };
 let lastArgs;
 let sf;
 let myTurn = false;
+let _wsInstance;
 
 function getKeyByValue(value) {
-    return Object.keys(piotr).find(key => piotr[key] === value);
+    return Object.keys(piotr).find((key) => piotr[key] === value);
 }
 
 function makeMove(move) {
@@ -112,39 +113,40 @@ function getUCIMoves(moves) {
         .join('');
 }
 
-(function(originalFetch) {
-    sf = new Worker(
-        '/bundles/app/js/vendor/jschessengine/stockfish.6983901b.js#/bundles/app/js/vendor/jschessengine/stockfish.6103b42f.bin'
-    );
-    console.log('engine')
-    sf.onmessage = function onmessage({ data }) {
-        if (data.indexOf('bestmove') > -1) {
-            let move = data.split(' ')[1];
-            move = `${getKeyByValue(move.slice(0, 2))}${getKeyByValue(move.slice(2))}`;
-            makeMove(move);
-            console.log(data);
+(function () {
+    var OrigWebSocket = window.WebSocket;
+    var callWebSocket = OrigWebSocket.apply.bind(OrigWebSocket);
+    var wsAddListener = OrigWebSocket.prototype.addEventListener;
+    wsAddListener = wsAddListener.call.bind(wsAddListener);
+    window.WebSocket = function WebSocket(url, protocols) {
+        var ws;
+        if (!(this instanceof WebSocket)) {
+            // Called without 'new' (browsers will throw an error).
+            ws = callWebSocket(this, arguments);
+        } else if (arguments.length === 1) {
+            ws = new OrigWebSocket(url);
+        } else if (arguments.length >= 2) {
+            ws = new OrigWebSocket(url, protocols);
+        } else {
+            // No arguments (browsers will throw an error)
+            ws = new OrigWebSocket();
         }
-    };
 
-    // ========================================================
-    window.fetch = function() {
-        if (arguments[1].body.indexOf('"channel":"/service/game","data":{"move"') > -1) {
-            lastArgs = arguments;
-            myTurn = false;
-        }
-        return new Promise((resolve, reject) => {
-            originalFetch
-                .apply(this, arguments)
-                .then(response => {
-                    if (response.url === 'https://live2.chess.com/cometd/connect') {
-                        response
-                            .clone()
-                            .json()
-                            .then(moveMade);
-                    }
-                    resolve(response);
-                })
-                .catch(error => reject(error));
+        wsAddListener(ws, 'message', function ({ data }) {
+            // TODO: Do something with event.data (received data) if you wish.
+            console.log('wsReceiveeeeee');
         });
-    };
-})(window.fetch);
+        return ws;
+    }.bind();
+    window.WebSocket.prototype = OrigWebSocket.prototype;
+    window.WebSocket.prototype.constructor = window.WebSocket;
+
+    // var wsSend = OrigWebSocket.prototype.send;
+    // wsSend = wsSend.apply.bind(wsSend);
+    // OrigWebSocket.prototype.send = function (data) {
+    //     // TODO: Do something with the sent data if you wish.
+    //     console.log('wsSenddddddd');
+    //     // _wsInstance = this;
+    //     return wsSend(this, arguments);
+    // };
+})();
